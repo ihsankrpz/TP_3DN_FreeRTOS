@@ -57,7 +57,9 @@ void MX_FREERTOS_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-SemaphoreHandle_t xSemaphore;
+//SemaphoreHandle_t xSemaphore;
+QueueHandle_t QueueHandle;
+UBaseType_t uxQueueLength = 10, uxItemSize = sizeof(int);
 TaskHandle_t handle_blink_led, handle_echo_uart, handle_givetask, handle_taketask;
 
 int __io_putchar(int chr) // pour faire des printf parce que printf appelle cette fonction
@@ -71,7 +73,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 	if(huart->Instance == USART1) // on s'assure que c'est l'uart1
 	{
-		BaseType_t xHigherPriorityTaskWoken; //???
+		BaseType_t xHigherPriorityTaskWoken; //
 		vTaskNotifyGiveFromISR( handle_echo_uart, &xHigherPriorityTaskWoken );
 
 		portYIELD_FROM_ISR( xHigherPriorityTaskWoken ); //
@@ -108,30 +110,72 @@ void task_uart_com_echo(void * unused)
 
 void task_give(void * unused)
 {
-//	BaseType_t higher_priority_task_woken = pdFALSE;
+//	BaseType_t xHigherPriorityTaskWoken; //
+	int q_value_send;
 
 	for(;;)
 	{
 		//semaphore part
-		printf("Task give before give\r\n");
-		xSemaphoreGive(xSemaphore);
-		printf("Task give after give\r\n");
-		vTaskDelay(portTICK_PERIOD_MS*100);
+//		printf("Task give before give\r\n");
+//		xSemaphoreGive(xSemaphore);
+//		printf("Task give after give\r\n");
+//		vTaskDelay(portTICK_PERIOD_MS*100);
 
 		//notification part
+//		for (int i = 0; i < 12; i++)
+//		{
+//			printf("Task give before give\r\n");
+//			xTaskNotifyGive( handle_taketask );
+//			printf("Task give after give\r\n");
+//			vTaskDelay(portTICK_PERIOD_MS*100*i);
+//		}
+
+
+		//queue
+
+		for (int i = 0; i < 20; i++)
+		{
+			q_value_send = i;
+			xQueueSend(QueueHandle, &q_value_send ,portMAX_DELAY);
+			vTaskDelay(portTICK_PERIOD_MS*100*i);
+		}
+
+
 	}
 }
 
 void task_take(void * unused)
 {
+//	uint32_t ret;
+	int q_value_receive;
+	BaseType_t ret_q;
+
 	for(;;)
 	{
 		//semaphore part
-		printf("Task take before take\r\n");
-		xSemaphoreTake(xSemaphore, portMAX_DELAY);
-		printf("Task take after take\r\n");
+//		printf("Task take before take\r\n");
+//		xSemaphoreTake(xSemaphore, portMAX_DELAY);
+//		printf("Task take after take\r\n");
 
 		//notifcation part
+//		printf("Task take before take\r\n");
+//		ret = ulTaskNotifyTake(pdTRUE, 1000);
+//		if(ret != pdTRUE)
+//		{
+//			NVIC_SystemReset();
+//			printf("System Reset\r\n");
+//		}
+//		printf("Task take after take\r\n");
+
+		//queue
+		ret_q = xQueueReceive(QueueHandle, &q_value_receive ,1000);
+		if(ret_q != pdTRUE)
+		{
+			NVIC_SystemReset();
+			printf("System Reset\r\n");
+		}
+		printf("Received %d\r\n", q_value_receive);
+
 	}
 }
 
@@ -172,7 +216,14 @@ int main(void)
 
   printf("\r\n================================================================\r\n");
 
-  xSemaphore = xSemaphoreCreateBinary();
+//  xSemaphore = xSemaphoreCreateBinary();
+  QueueHandle =  xQueueCreate ( uxQueueLength, uxItemSize);
+
+  if(QueueHandle == NULL)
+  {
+	  printf("Error creating Queue \r\n");
+	  Error_Handler();
+  }
 
   //TASK LED
   ret = xTaskCreate(  task_blink_led,
@@ -218,7 +269,7 @@ int main(void)
   	  Error_Handler();
     }
 
-    //TASK UART
+    //TASK Take
     ret = xTaskCreate(  task_take,
     				"Task Take",
   					256, // Taille de la pile (en mots de 32 bits)
