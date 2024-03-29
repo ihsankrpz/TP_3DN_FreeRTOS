@@ -112,3 +112,15 @@ Pour cela, il faut déclarer un static int delay. Static pour qu'il ne soit pas 
 La fonction led(); dans le shell; aura comme argument le nouveau delay. La tâche led prendra donc en compte la variable globale delay pour son vTaskDelay().
 
 La prochaine étape est de créer une tache spam qui s'éxécute en parallèle du clignottement de la led. Il spam le message msg avec une période delaymsg.
+
+## Debug, gestion d’erreur et statistiques
+
+### Gestion du tas
+La zone réservé pour l'allocation dynamique s'appelle le tas. IL est géré par le HAL.
+Avant de créer des tâches en boucle la RAM est utilisé à 5.93%.
+Lorsqu'on créer des tâches bidon jusqu'à avoir une erreur, le code plante pour 10 task_bidon créée. Le total_heap_size du freeRTOS était par défault à 15360.
+L'utilisation de la RAM passe à 5.74%.
+On modifie le tas de la freeRTOS pour pouvoir en créer plus, on le passe à 153600.
+Maintenant 123 tâches sont créer avant de planter. La RAM est uutilisé à 47.93%
+
+### Gestion de la pile

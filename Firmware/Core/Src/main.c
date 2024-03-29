@@ -71,10 +71,11 @@ void MX_FREERTOS_Init(void);
 QueueHandle_t QueueHandle;
 UBaseType_t uxQueueLength = 10, uxItemSize = sizeof(int);
 TaskHandle_t handle_blink_led, handle_echo_uart, handle_givetask,
-			handle_taketask, handle_shell, handle_spam;
-static int delayLed = 100;
-static int delaymsg = 1000;
+			handle_taketask, handle_shell, handle_spam, handle_bidon;
+static int delayLed = 0;
+static int delaymsg = 0;
 char * msg = "test";
+static int count_bidon = 0;
 
 ////////////////////////////////////////////////////////////////////////////////////
 // CALLBACKS
@@ -110,15 +111,11 @@ void task_blink_led(void * unused)
 	  if(delayLed != 0 )
 	  {
 		  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-		  //printf("LED state changed\r\n");
-		  vTaskDelay(portTICK_PERIOD_MS*delayLed);
-		  //printf("Led State changed");
-		  //HAL_Delay(100); // <= très con de faire ça !!! parce qu'il prend tout le cpu pour le calcul de 100 et ne bloque pas.
-
-	  }
+		  vTaskDelay(portTICK_PERIOD_MS*delayLed);  }
 	  else
 	  {
 		  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin,GPIO_PIN_RESET);
+		  vTaskSuspend(handle_blink_led);
 	  }
 	}
 }
@@ -145,102 +142,18 @@ void task_spam(void *unused)
 		}
 		else
 		{
-			vTaskDelete(NULL);
+			vTaskSuspend(handle_spam);
 		}
 	}
 }
 
-////////////////////////////////////////////////////////////////////////////////////
-// SHELL FUNCTIONS
-////////////////////////////////////////////////////////////////////////////////////
-
-int fonction(int argc, char ** argv)
+void task_bidon(void * unused)
 {
-	printf("argc = %d\r\n", argc);
-
-	for(int itr = 0; itr < argc; itr++)
+	for(;;)
 	{
-		printf("argv[%d] = %s\r\n", itr, argv[itr]);
+		printf("create task %d \r\n", count_bidon);
 	}
-
-	return 0;
 }
-
-int addition (int argc, char ** argv)
-{
-	//récupérer deux paramètre ni plus ni moins
-	//convertir les deux paramètres en nombres entier
-	//les additioners et afficher le résultat
-
-	if(argc != 3)
-	{
-		//faire planter proprement si on a plus de deux paramètre
-		printf("Error, excpected 2 argument\r\n");
-		return -1;
-	}
-	else
-	{
-		int a,b, result;
-		// permet de récupérer les deux paramètres et de les convertir en entier
-		a = atoi(argv[1]);
-		b = atoi(argv[2]);
-
-		result = a+b;
-		printf("%d + %d = %d\r\n", a, b, result);
-	}
-
-	return 0;
-}
-
-int led(int argc, char ** argv)
-{
-	if(argc != 2)
-	{
-		//faire planter proprement si on a plus de deux paramètre
-		printf("Error, excpected 1 argument\r\n");
-		return -1;
-	}
-	else
-	{
-		delayLed = atoi(argv[1]);
-	}
-
-	return 0;
-}
-
-int spam(int argc, char ** argv)
-{
-	int ret;
-	if(argc != 3)
-	{
-		//faire planter proprement si on a plus de deux paramètre
-		printf("Error, excpected 2 argument\r\n");
-		return -1;
-	}
-	else
-	{
-	    //TASK spam
-	    ret = xTaskCreate(  task_spam,
-	    				"SPAM",
-	  					256, // Taille de la pile (en mots de 32 bits)
-	  					NULL, //paramètre non utilisé ici
-	  					5, //Prio
-	  					&handle_spam
-	  				   );
-
-	    if(ret != pdPASS)
-	    {
-	  	  printf("Error creating Task spam task\r\n");
-	  	  Error_Handler();
-	    }
-
-	    delaymsg = atoi(argv[1]);
-		msg = argv[2];
-	}
-
-	return 0;
-}
-
 
 //void task_uart_com_echo(void * unused)
 //{
@@ -326,6 +239,91 @@ int spam(int argc, char ** argv)
 //
 //	}
 //}
+
+////////////////////////////////////////////////////////////////////////////////////
+// SHELL FUNCTIONS
+////////////////////////////////////////////////////////////////////////////////////
+
+int fonction(int argc, char ** argv)
+{
+	printf("argc = %d\r\n", argc);
+
+	for(int itr = 0; itr < argc; itr++)
+	{
+		printf("argv[%d] = %s\r\n", itr, argv[itr]);
+	}
+
+	return 0;
+}
+
+int addition (int argc, char ** argv)
+{
+	//récupérer deux paramètre ni plus ni moins
+	//convertir les deux paramètres en nombres entier
+	//les additioners et afficher le résultat
+
+	if(argc != 3)
+	{
+		//faire planter proprement si on a plus de deux paramètre
+		printf("Error, excpected 2 argument\r\n");
+		return -1;
+	}
+	else
+	{
+		int a,b, result;
+		// permet de récupérer les deux paramètres et de les convertir en entier
+		a = atoi(argv[1]);
+		b = atoi(argv[2]);
+
+		result = a+b;
+		printf("%d + %d = %d\r\n", a, b, result);
+	}
+
+	return 0;
+}
+
+int led(int argc, char ** argv)
+{
+	if(argc != 2)
+	{
+		//faire planter proprement si on a plus de deux paramètre
+		printf("Error, excpected 1 argument\r\n");
+		return -1;
+	}
+	else
+	{
+		delayLed = atoi(argv[1]);
+
+		if(delayLed != 0)
+		{
+			vTaskResume(handle_blink_led);
+		}
+	}
+
+	return 0;
+}
+
+int spam(int argc, char ** argv)
+{
+	if(argc != 3)
+	{
+		//faire planter proprement si on a plus de deux paramètre
+		printf("Error, excpected 2 argument\r\n");
+		return -1;
+	}
+	else
+	{
+	    delaymsg = atoi(argv[1]);
+		msg = argv[2];
+
+		if(delaymsg != 0)
+		{
+			vTaskResume(handle_spam);
+		}
+	}
+
+	return 0;
+}
 
 
 /* USER CODE END 0 */
@@ -446,6 +444,40 @@ int main(void)
     {
   	  printf("Error creating Task Shell task\r\n");
   	  Error_Handler();
+    }
+
+    //TASK spam
+    ret = xTaskCreate(  task_spam,
+    				"SPAM",
+  					256, // Taille de la pile (en mots de 32 bits)
+  					NULL, //paramètre non utilisé ici
+  					5, //Prio
+  					&handle_spam
+  				   );
+
+    if(ret != pdPASS)
+    {
+  	  printf("Error creating Task spam task\r\n");
+  	  Error_Handler();
+    }
+
+    while(1)
+    {
+    	ret = xTaskCreate(  task_bidon,
+    	    				"bidon",
+    	  					256, // Taille de la pile (en mots de 32 bits)
+    	  					NULL, //paramètre non utilisé ici
+    	  					15, //Prio
+    	  					&handle_bidon
+    	  				   );
+
+		if(ret != pdPASS)
+		{
+		  printf("Error creating Task bidon task\r\n");
+		  Error_Handler();
+		}
+		printf("create task %d \r\n", count_bidon);
+		count_bidon ++;
     }
 
 
