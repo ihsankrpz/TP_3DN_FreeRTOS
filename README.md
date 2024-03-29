@@ -110,3 +110,5 @@ Dans la fcontion de callback de cette interreption, on fais un notifyGive et dan
 La prochaine étape et donc de créer une fonction qui viendra modifier le delay de la led sachant le led clignotte dans un tâche. 
 Pour cela, il faut déclarer un static int delay. Static pour qu'il ne soit pas dans la pile. 
 La fonction led(); dans le shell; aura comme argument le nouveau delay. La tâche led prendra donc en compte la variable globale delay pour son vTaskDelay().
+
+La prochaine étape est de créer une tache spam qui s'éxécute en parallèle du clignottement de la led. Il spam le message msg avec une période delaymsg.
