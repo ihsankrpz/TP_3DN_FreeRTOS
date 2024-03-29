@@ -96,5 +96,17 @@ Je suis la tache 2 et je m'endors pour 2 ticks
 
 Le problème est donc résolue.
 
+## On joue avec le Shell
 
+Seules les interruptions dont la priorité est supérieure à la valeur configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY (définie à 5 par défaut) peuvent appeler des primitives de FreeRTOS. 
+On peut soit modifier ce seuil, soit modifier la priorité de l’interruption de l’USART1 (0 par défaut).
 
+Pour faire fonctionner le shell en même temps que toutes les tâches; donc avec le scheduler; il faut créer une tâche pour le shell. 
+Cette tâche réalise l'initialisation du shell et le run. Le run étant une boucle infinie, il bloque. 
+
+Pour avoir un shell propre, il ne faut pas faire du polling dans le shell et écouter en permanance l'uart mais passer par une interruption de l'uart seulement lorsqu'il reçois un caractère.
+Dans la fcontion de callback de cette interreption, on fais un notifyGive et dans la fonction uart_read() qui se trouve dans le shell.c, on fait un notify take. 
+
+La prochaine étape et donc de créer une fonction qui viendra modifier le delay de la led sachant le led clignotte dans un tâche. 
+Pour cela, il faut déclarer un static int delay. Static pour qu'il ne soit pas dans la pile. 
+La fonction led(); dans le shell; aura comme argument le nouveau delay. La tâche led prendra donc en compte la variable globale delay pour son vTaskDelay().

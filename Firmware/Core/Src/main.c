@@ -25,6 +25,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include <stdlib.h>
+#include "shell.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -60,7 +62,8 @@ void MX_FREERTOS_Init(void);
 //SemaphoreHandle_t xSemaphore;
 QueueHandle_t QueueHandle;
 UBaseType_t uxQueueLength = 10, uxItemSize = sizeof(int);
-TaskHandle_t handle_blink_led, handle_echo_uart, handle_givetask, handle_taketask;
+TaskHandle_t handle_blink_led, handle_echo_uart, handle_givetask, handle_taketask, handle_shell;
+static int delay = 100;
 
 int __io_putchar(int chr) // pour faire des printf parce que printf appelle cette fonction
 {
@@ -74,7 +77,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	if(huart->Instance == USART1) // on s'assure que c'est l'uart1
 	{
 		BaseType_t xHigherPriorityTaskWoken; //
-		vTaskNotifyGiveFromISR( handle_echo_uart, &xHigherPriorityTaskWoken );
+		vTaskNotifyGiveFromISR( handle_shell, &xHigherPriorityTaskWoken );
 
 		portYIELD_FROM_ISR( xHigherPriorityTaskWoken ); //
 	}
@@ -86,27 +89,35 @@ void task_blink_led(void * unused)
 {
 	for(;;)
 	{
-	  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-	  printf("LED state changed\r\n");
-	  vTaskDelay(portTICK_PERIOD_MS*100);
-	  //printf("Led State changed");
-	  //HAL_Delay(100); // <= très con de faire ça !!! parce qu'il prend tout le cpu pour le calcul de 100 et ne bloque pas.
+	  if(delay != 0 )
+	  {
+		  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+		  //printf("LED state changed\r\n");
+		  vTaskDelay(portTICK_PERIOD_MS*delay);
+		  //printf("Led State changed");
+		  //HAL_Delay(100); // <= très con de faire ça !!! parce qu'il prend tout le cpu pour le calcul de 100 et ne bloque pas.
+
+	  }
+	  else
+	  {
+		  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin,GPIO_PIN_RESET);
+	  }
 	}
 }
 
-void task_uart_com_echo(void * unused)
-{
-	for(;;)
-	{
-		char pData;
-		HAL_UART_Receive_IT(&huart1, (uint8_t *)&pData, 1);
-
-		ulTaskNotifyTake( pdTRUE, portMAX_DELAY ); // on admet
-
-		HAL_UART_Transmit(&huart1, (uint8_t *)&pData, 1, HAL_MAX_DELAY);
-
-	}
-}
+//void task_uart_com_echo(void * unused)
+//{
+//	for(;;)
+//	{
+//		char pData;
+//		HAL_UART_Receive_IT(&huart1, (uint8_t *)&pData, 1);
+//
+//		ulTaskNotifyTake( pdTRUE, portMAX_DELAY ); // on admet
+//
+//		HAL_UART_Transmit(&huart1, (uint8_t *)&pData, 1, HAL_MAX_DELAY);
+//
+//	}
+//}
 
 void task_give(void * unused)
 {
@@ -169,14 +180,78 @@ void task_take(void * unused)
 
 		//queue
 		ret_q = xQueueReceive(QueueHandle, &q_value_receive ,1000);
-		if(ret_q != pdTRUE)
-		{
-			NVIC_SystemReset();
-			printf("System Reset\r\n");
-		}
-		printf("Received %d\r\n", q_value_receive);
+//		if(ret_q != pdTRUE)
+//		{
+//			NVIC_SystemReset();
+//			printf("System Reset\r\n");
+//		}
+//		printf("Received %d\r\n", q_value_receive);
 
 	}
+}
+
+int fonction(int argc, char ** argv)
+{
+	printf("argc = %d\r\n", argc);
+
+	for(int itr = 0; itr < argc; itr++)
+	{
+		printf("argv[%d] = %s\r\n", itr, argv[itr]);
+	}
+
+	return 0;
+}
+
+int addition (int argc, char ** argv)
+{
+	//récupérer deux paramètre ni plus ni moins
+	//convertir les deux paramètres en nombres entier
+	//les additioners et afficher le résultat
+
+	if(argc != 3)
+	{
+		//faire planter proprement si on a plus de deux paramètre
+		printf("Error, excpected 2 argument\r\n");
+		return -1;
+	}
+	else
+	{
+		int a,b, result;
+		// permet de récupérer les deux paramètres et de les convertir en entier
+		a = atoi(argv[1]);
+		b = atoi(argv[2]);
+
+		result = a+b;
+		printf("%d + %d = %d\r\n", a, b, result);
+	}
+
+	return 0;
+}
+
+int led(int argc, char ** argv)
+{
+	if(argc != 2)
+	{
+		//faire planter proprement si on a plus de deux paramètre
+		printf("Error, excpected 1 argument\r\n");
+		return -1;
+	}
+	else
+	{
+		delay = atoi(argv[1]);
+	}
+
+	return 0;
+}
+
+void shell(void * unused)
+{
+	shell_init();
+	shell_add('f', fonction, "Une fonction inutile");
+	shell_add('a', addition, "Add 2 value");
+	shell_add('l', led, "Change led delay (ms)");
+
+	shell_run();
 }
 
 /* USER CODE END 0 */
@@ -230,7 +305,7 @@ int main(void)
   					"Blink LED",
   					256, // Taille de la pile (en mots de 32 bits)
   					NULL, //paramètre non utilisé ici
-  					4, //Prio
+  					5, //Prio
   					&handle_blink_led
   				   );
     if(ret != pdPASS)
@@ -239,27 +314,27 @@ int main(void)
   	  Error_Handler();
     }
 
-    //TASK UART
-    ret = xTaskCreate(  task_uart_com_echo,
-  					"Echo UART",
-  					256, // Taille de la pile (en mots de 32 bits)
-  					NULL, //paramètre non utilisé ici
-  					5, //Prio
-  					&handle_echo_uart
-  				   );
-
-    if(ret != pdPASS)
-    {
-  	  printf("Error creating Echo UART task\r\n");
-  	  Error_Handler();
-    }
+//    //TASK UART
+//    ret = xTaskCreate(  task_uart_com_echo,
+//  					"Echo UART",
+//  					256, // Taille de la pile (en mots de 32 bits)
+//  					NULL, //paramètre non utilisé ici
+//  					5, //Prio
+//  					&handle_echo_uart
+//  				   );
+//
+//    if(ret != pdPASS)
+//    {
+//  	  printf("Error creating Echo UART task\r\n");
+//  	  Error_Handler();
+//    }
 
     //TASK GIVE
     ret = xTaskCreate(  task_give,
   					"Task Give",
   					256, // Taille de la pile (en mots de 32 bits)
   					NULL, //paramètre non utilisé ici
-  					2, //Prio
+  					6, //Prio
   					&handle_givetask
   				   );
 
@@ -274,13 +349,28 @@ int main(void)
     				"Task Take",
   					256, // Taille de la pile (en mots de 32 bits)
   					NULL, //paramètre non utilisé ici
-  					3, //Prio
+  					7, //Prio
   					&handle_taketask
   				   );
 
     if(ret != pdPASS)
     {
   	  printf("Error creating Task Take task\r\n");
+  	  Error_Handler();
+    }
+
+    //TASK Shell
+    ret = xTaskCreate(  shell,
+    				"SHELL",
+  					256, // Taille de la pile (en mots de 32 bits)
+  					NULL, //paramètre non utilisé ici
+  					10, //Prio
+  					&handle_shell
+  				   );
+
+    if(ret != pdPASS)
+    {
+  	  printf("Error creating Task Shell task\r\n");
   	  Error_Handler();
     }
 
@@ -292,10 +382,10 @@ int main(void)
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in freertos.c) */
-//  MX_FREERTOS_Init();
+  MX_FREERTOS_Init();
 
   /* Start scheduler */
-//  osKernelStart();
+  osKernelStart();
 
   /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
