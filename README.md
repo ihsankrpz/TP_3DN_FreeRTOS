@@ -116,7 +116,8 @@ Maintenant 123 tâches sont créer avant de planter. La RAM est uutilisé à 47.
 
 ### Gestion de la pile
 
-# RAPPEL :
+RAPPEL :
+
 Une variable interne à la fonction est dans la pile !
 Une varibale globale et une variable static (interne ou non) est dans le segment de donnée (RAM) et est compilé !
 Une variable alloué dynamiquement (malloc, alloc, creation de tache, semaphore, handle, notif, queue etc..) est dans le tas/
