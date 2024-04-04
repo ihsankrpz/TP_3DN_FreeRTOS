@@ -147,17 +147,17 @@ void task_spam(void *unused)
 	}
 }
 
-void task_bidon(void * unused)
-{
-	int tableau_enorme[1000];
-	int i = 0;
-	for(;;)
-	{
-		tableau_enorme[i] = i;
-		i++;
-		printf("tableau_enorme[%d] = %d \r\n",i, tableau_enorme[i]);
-	}
-}
+//void task_bidon(void * unused)
+//{
+//	int tableau_enorme[1000];
+//	int i = 0;
+//	for(;;)
+//	{
+//		tableau_enorme[i] = i;
+//		i++;
+//		printf("tableau_enorme[%d] = %d \r\n",i, tableau_enorme[i]);
+//	}
+//}
 
 //void task_uart_com_echo(void * unused)
 //{
@@ -333,14 +333,14 @@ int spam(int argc, char ** argv)
 // OWERFLOW CHECK
 ////////////////////////////////////////////////////////////////////////////////////
 
-void vApplicationStackOverflowHook( TaskHandle_t xTask, signed char *pcTaskName )
-{
-	for(;;)
-	{
-		HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-		vTaskDelay(portTICK_PERIOD_MS*100);
-	}
-}
+//void vApplicationStackOverflowHook( TaskHandle_t xTask, signed char *pcTaskName )
+//{
+//	for(;;)
+//	{
+//		HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+//		vTaskDelay(portTICK_PERIOD_MS*100);
+//	}
+//}
 
 
 
@@ -487,20 +487,20 @@ int main(void)
   	  Error_Handler();
     }
 
-    //TASK BIDON
-    ret = xTaskCreate(  task_bidon,
-						"bidon",
-						256, // Taille de la pile (en mots de 32 bits)
-						NULL, //paramètre non utilisé ici
-						15, //Prio
-						&handle_bidon
-					   );
-
-	if(ret != pdPASS)
-	{
-	  printf("Error creating Task bidon task\r\n");
-	  Error_Handler();
-	}
+//    //TASK BIDON
+//    ret = xTaskCreate(  task_bidon,
+//						"bidon",
+//						256, // Taille de la pile (en mots de 32 bits)
+//						NULL, //paramètre non utilisé ici
+//						15, //Prio
+//						&handle_bidon
+//					   );
+//
+//	if(ret != pdPASS)
+//	{
+//	  printf("Error creating Task bidon task\r\n");
+//	  Error_Handler();
+//	}
 //
 //    while(1)
 //    {

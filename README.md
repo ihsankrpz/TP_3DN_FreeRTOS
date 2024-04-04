@@ -131,4 +131,14 @@ Afin de tester, on créer une tache bidon qui créer un tableau énorme et qui s
 Le tabeau prend une taille supérieure à la palce de la pile se qui créer notre cas. 
 Pour le test, on passe en mode débug, on met un point d'arrêt puis on observe le code s'arrêter dans la fonction d'overflow.
 
+### Statistiques dans l’IDE
 
+L'objectif ici est d'observer les différent status de FreeRTOS. 
+Pour cela on active :
+— GENERATE_RUN_TIME_STATS
+— USE_TRACE_FACILITY
+— USE_STATS_FORMATTING_FUNCTIONS
+
+On observe:
+
+![FreeRTOS Task List](image.png)
