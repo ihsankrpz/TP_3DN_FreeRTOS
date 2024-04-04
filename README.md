@@ -13,14 +13,12 @@ Dans cette étape du TP nous en sommes rendu à créer des sémaphores et à jou
 Nous avons deux tâches : task_give qui prend le sémaphore pour un délai de 100ms et task_take qui prend le sémaphore dès qu'il a l'occasion et le bloque.
 Dans le cas où task_give est plus prioritaire, nous avons une sortie samblable à :
 
-/*
-Task give before
+*Task give before
 Task take before
 Task take after
 Task take before
 Task give after
-...
-*/
+...*
 
 Cela est dû au délai de 100ms. task_take à le temps de reprendre le sémaphore avant le "give after"
 
@@ -46,7 +44,7 @@ Le fonctionnement des queue est un peu différent. La queue met dans une fifo la
 // send dans task1
 q_value_send = i;
 xQueueSend(QueueHandle, &q_value_send ,portMAX_DELAY);
-vTaskDelay(portTICK_PERIOD_MS*100*i);
+vTaskDelay(portTICK_PERIOD_MS * 100 * i);
 
 //receive dans task2
 ret_q = xQueueReceive(QueueHandle, &q_value_receive ,1000);
@@ -124,3 +122,20 @@ On modifie le tas de la freeRTOS pour pouvoir en créer plus, on le passe à 153
 Maintenant 123 tâches sont créer avant de planter. La RAM est uutilisé à 47.93%
 
 ### Gestion de la pile
+
+# RAPPEL :
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+Une variable interne à la fonction est dans la pile !
+Une varibale globale et une variable static (interne ou non) est dans le segment de donnée (RAM) et est compilé !
+Une variable alloué dynamiquement (malloc, alloc, creation de tache, semaphore, handle, notif, queue etc..) est dans le tas/
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# END RAPPEL
+
+Pour cette partie notre objectif est de créer un overflow. 
+Pour cela, d'après la documentation FreeRTOS, nous utilisons la fonction vApplicationStackOverflowHook appelé automatiquement en cas d'overflow. 
+Cette fonction cligontera une led dans le cas overflow. 
+Afin de tester, on créer une tache bidon qui créer un tableau énorme et qui se rempli.
+Le tabeau prend une taille supérieure à la palce de la pile se qui créer notre cas. 
+Pour le test, on passe en mode débug, on met un point d'arrêt puis on observe le code s'arrêter dans la fonction d'overflow.
+
+

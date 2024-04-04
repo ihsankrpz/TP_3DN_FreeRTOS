@@ -75,7 +75,7 @@ TaskHandle_t handle_blink_led, handle_echo_uart, handle_givetask,
 static int delayLed = 0;
 static int delaymsg = 0;
 char * msg = "test";
-static int count_bidon = 0;
+//static int count_bidon = 0;
 
 ////////////////////////////////////////////////////////////////////////////////////
 // CALLBACKS
@@ -149,9 +149,13 @@ void task_spam(void *unused)
 
 void task_bidon(void * unused)
 {
+	int tableau_enorme[1000];
+	int i = 0;
 	for(;;)
 	{
-		printf("create task %d \r\n", count_bidon);
+		tableau_enorme[i] = i;
+		i++;
+		printf("tableau_enorme[%d] = %d \r\n",i, tableau_enorme[i]);
 	}
 }
 
@@ -325,6 +329,24 @@ int spam(int argc, char ** argv)
 	return 0;
 }
 
+////////////////////////////////////////////////////////////////////////////////////
+// OWERFLOW CHECK
+////////////////////////////////////////////////////////////////////////////////////
+
+void vApplicationStackOverflowHook( TaskHandle_t xTask, signed char *pcTaskName )
+{
+	for(;;)
+	{
+		HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+		vTaskDelay(portTICK_PERIOD_MS*100);
+	}
+}
+
+
+
+////////////////////////////////////////////////////////////////////////////////////
+// MAIN
+////////////////////////////////////////////////////////////////////////////////////
 
 /* USER CODE END 0 */
 
@@ -371,6 +393,10 @@ int main(void)
 	  printf("Error creating Queue \r\n");
 	  Error_Handler();
   }
+
+  ////////////////////////////////////////////////////////////////////////////////////
+  // TASK CREATIONS
+  ////////////////////////////////////////////////////////////////////////////////////
 
   //TASK LED
   ret = xTaskCreate(  task_blink_led,
@@ -461,27 +487,46 @@ int main(void)
   	  Error_Handler();
     }
 
-    while(1)
-    {
-    	ret = xTaskCreate(  task_bidon,
-    	    				"bidon",
-    	  					256, // Taille de la pile (en mots de 32 bits)
-    	  					NULL, //paramètre non utilisé ici
-    	  					15, //Prio
-    	  					&handle_bidon
-    	  				   );
+    //TASK BIDON
+    ret = xTaskCreate(  task_bidon,
+						"bidon",
+						256, // Taille de la pile (en mots de 32 bits)
+						NULL, //paramètre non utilisé ici
+						15, //Prio
+						&handle_bidon
+					   );
 
-		if(ret != pdPASS)
-		{
-		  printf("Error creating Task bidon task\r\n");
-		  Error_Handler();
-		}
-		printf("create task %d \r\n", count_bidon);
-		count_bidon ++;
-    }
+	if(ret != pdPASS)
+	{
+	  printf("Error creating Task bidon task\r\n");
+	  Error_Handler();
+	}
+//
+//    while(1)
+//    {
+//    	ret = xTaskCreate(  task_bidon,
+//    	    				"bidon",
+//    	  					256, // Taille de la pile (en mots de 32 bits)
+//    	  					NULL, //paramètre non utilisé ici
+//    	  					15, //Prio
+//    	  					&handle_bidon
+//    	  				   );
+//
+//		if(ret != pdPASS)
+//		{
+//		  printf("Error creating Task bidon task\r\n");
+//		  Error_Handler();
+//		}
+//		printf("create task %d \r\n", count_bidon);
+//		count_bidon ++;
+//    }
 
 
     printf("Task Creation Successful\r\n");
+
+    ////////////////////////////////////////////////////////////////////////////////////
+    // SCHEDULER START
+    ////////////////////////////////////////////////////////////////////////////////////
 
     vTaskStartScheduler(); //Boucle Infinie, rien ne s'execute apres !!!
 
