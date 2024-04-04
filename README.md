@@ -143,3 +143,7 @@ On observe:
 
 ![FreeRTOS Task List](image.png)
 
+On créer deux taches queue et deux taches sémaphores. 
+
+![FreeRTOS Task List](image-1.png)
+

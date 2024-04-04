@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -67,11 +68,11 @@ void MX_FREERTOS_Init(void);
 // DECLARATIONS
 ////////////////////////////////////////////////////////////////////////////////////
 
-//SemaphoreHandle_t xSemaphore;
+SemaphoreHandle_t xSemaphore;
 QueueHandle_t QueueHandle;
 UBaseType_t uxQueueLength = 10, uxItemSize = sizeof(int);
 TaskHandle_t handle_blink_led, handle_echo_uart, handle_givetask,
-			handle_taketask, handle_shell, handle_spam, handle_bidon;
+			handle_taketask, handle_shell, handle_spam, handle_bidon, handle_status;
 static int delayLed = 0;
 static int delaymsg = 0;
 char * msg = "test";
@@ -127,6 +128,7 @@ void shell(void * unused)
 	shell_add('a', addition, "Add 2 value");
 	shell_add('l', led, "Change led delay (ms)");
 	shell_add('s', spam, "spam message");
+	shell_add('c', status, "CPU status");
 
 	shell_run();
 }
@@ -144,6 +146,14 @@ void task_spam(void *unused)
 		{
 			vTaskSuspend(handle_spam);
 		}
+	}
+}
+
+void task_status(void *unused)
+{
+	for(;;)
+	{
+
 	}
 }
 
@@ -173,19 +183,13 @@ void task_spam(void *unused)
 //	}
 //}
 
-//void task_give(void * unused)
+//void task_give_queue(void * unused)
 //{
 ////	BaseType_t xHigherPriorityTaskWoken; //
 //	int q_value_send;
 //
 //	for(;;)
 //	{
-//		//semaphore part
-////		printf("Task give before give\r\n");
-////		xSemaphoreGive(xSemaphore);
-////		printf("Task give after give\r\n");
-////		vTaskDelay(portTICK_PERIOD_MS*100);
-//
 //		//notification part
 ////		for (int i = 0; i < 12; i++)
 ////		{
@@ -208,8 +212,8 @@ void task_spam(void *unused)
 //
 //	}
 //}
-
-//void task_take(void * unused)
+//
+//void task_take_queue(void * unused)
 //{
 ////	uint32_t ret;
 //	int q_value_receive;
@@ -217,11 +221,6 @@ void task_spam(void *unused)
 //
 //	for(;;)
 //	{
-//		//semaphore part
-////		printf("Task take before take\r\n");
-////		xSemaphoreTake(xSemaphore, portMAX_DELAY);
-////		printf("Task take after take\r\n");
-//
 //		//notifcation part
 ////		printf("Task take before take\r\n");
 ////		ret = ulTaskNotifyTake(pdTRUE, 1000);
@@ -240,6 +239,31 @@ void task_spam(void *unused)
 ////			printf("System Reset\r\n");
 ////		}
 ////		printf("Received %d\r\n", q_value_receive);
+//
+//	}
+//}
+//
+//void task_give_semaphore(void * unused)
+//{
+//	for(;;)
+//	{
+//		//semaphore part
+////		printf("Task give before give\r\n");
+//		xSemaphoreGive(xSemaphore);
+////		printf("Task give after give\r\n");
+//		vTaskDelay(portTICK_PERIOD_MS*100);
+//	}
+//}
+//
+//void task_take_semaphore(void * unused)
+//{
+//
+//	for(;;)
+//	{
+//		//semaphore part
+////		printf("Task take before take\r\n");
+//		xSemaphoreTake(xSemaphore, portMAX_DELAY);
+////		printf("Task take after take\r\n");
 //
 //	}
 //}
@@ -329,6 +353,13 @@ int spam(int argc, char ** argv)
 	return 0;
 }
 
+int status(int argc, char ** argv)
+{
+
+
+	return 0;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////
 // OWERFLOW CHECK
 ////////////////////////////////////////////////////////////////////////////////////
@@ -342,7 +373,28 @@ int spam(int argc, char ** argv)
 //	}
 //}
 
+////////////////////////////////////////////////////////////////////////////////////
+// CPU USE
+////////////////////////////////////////////////////////////////////////////////////
+void configureTimerForRunTimeStats()
+{
+	HAL_TIM_Base_Start(&htim2);
+}
 
+unsigned long getRunTimeCounterValue()
+{
+	return __HAL_TIM_GET_COUNTER(&htim2);
+}
+
+void vTaskGetRunTimeStats(char * pcWriteBuffer)
+{
+
+}
+
+void vTaskList(char * pcWriteBuffer)
+{
+
+}
 
 ////////////////////////////////////////////////////////////////////////////////////
 // MAIN
@@ -379,13 +431,14 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART1_UART_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 
   BaseType_t ret;
 
   printf("\r\n================================================================\r\n");
 
-//  xSemaphore = xSemaphoreCreateBinary();
+  xSemaphore = xSemaphoreCreateBinary();
   QueueHandle =  xQueueCreate ( uxQueueLength, uxItemSize);
 
   if(QueueHandle == NULL)
@@ -428,8 +481,8 @@ int main(void)
 //    }
 
 //    //TASK GIVE
-//    ret = xTaskCreate(  task_give,
-//  					"Task Give",
+//    ret = xTaskCreate(  task_give_queue,
+//  					"Task Give Queue",
 //  					256, // Taille de la pile (en mots de 32 bits)
 //  					NULL, //paramètre non utilisé ici
 //  					6, //Prio
@@ -443,11 +496,41 @@ int main(void)
 //    }
 //
 //    //TASK Take
-//    ret = xTaskCreate(  task_take,
-//    				"Task Take",
+//    ret = xTaskCreate(  task_take_queue,
+//    				"Task Take Queue",
 //  					256, // Taille de la pile (en mots de 32 bits)
 //  					NULL, //paramètre non utilisé ici
-//  					7, //Prio
+//  					8, //Prio
+//  					&handle_taketask
+//  				   );
+//
+//    if(ret != pdPASS)
+//    {
+//  	  printf("Error creating Task Take task\r\n");
+//  	  Error_Handler();
+//    }
+//
+//    //TASK GIVE Semaphore
+//    ret = xTaskCreate(  task_give_semaphore,
+//  					"Task Give Semaphore",
+//  					256, // Taille de la pile (en mots de 32 bits)
+//  					NULL, //paramètre non utilisé ici
+//  					6, //Prio
+//  					&handle_givetask
+//  				   );
+//
+//    if(ret != pdPASS)
+//    {
+//  	  printf("Error creating Task Give task\r\n");
+//  	  Error_Handler();
+//    }
+//
+//    //TASK Take Semaphore
+//    ret = xTaskCreate(  task_take_semaphore,
+//    				"Task Take Semaphore",
+//  					256, // Taille de la pile (en mots de 32 bits)
+//  					NULL, //paramètre non utilisé ici
+//  					8, //Prio
 //  					&handle_taketask
 //  				   );
 //
@@ -479,6 +562,21 @@ int main(void)
   					NULL, //paramètre non utilisé ici
   					5, //Prio
   					&handle_spam
+  				   );
+
+    if(ret != pdPASS)
+    {
+  	  printf("Error creating Task spam task\r\n");
+  	  Error_Handler();
+    }
+
+    //TASK status
+    ret = xTaskCreate(  task_status,
+    				"STATUS",
+  					256, // Taille de la pile (en mots de 32 bits)
+  					NULL, //paramètre non utilisé ici
+  					5, //Prio
+  					&handle_status
   				   );
 
     if(ret != pdPASS)
