@@ -142,3 +142,4 @@ Pour cela on active :
 On observe:
 
 ![FreeRTOS Task List](image.png)
+
