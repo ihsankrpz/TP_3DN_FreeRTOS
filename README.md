@@ -24,24 +24,21 @@ Cela est dû au délai de 100ms. task_take à le temps de reprendre le sémaphor
 
 Lorsqu'on inverse les priorités; task_take plus prioritaire; nous avons : 
 
-/*
-Task take before
+*Task take before
 Task give before
 Task take after
 Task take before
 Task give after
 Task give before
 Task take after
-...
-*/
+...*
 
 La prochaine étape est de réaliser les tâches avec des notifications puis en utilisant une queue. (voir commit 36ac1130)
 Pour les notifications, nous avons le même fonctionnement que pour le semaphore.
 
 Le fonctionnement des queue est un peu différent. La queue met dans une fifo la valeur à envoyer et pour la réception, il faut lire la valeur.
 
-/*
-// send dans task1
+*// send dans task1
 q_value_send = i;
 xQueueSend(QueueHandle, &q_value_send ,portMAX_DELAY);
 vTaskDelay(portTICK_PERIOD_MS * 100 * i);
@@ -53,8 +50,7 @@ if(ret_q != pdTRUE)
     NVIC_SystemReset();
     printf("System Reset\r\n");
 }
-printf("Received %d\r\n", q_value_receive);
-*/
+printf("Received %d\r\n", q_value_receive);*
 
 
 Pour la suite nous récupérons un projet avec un problème au lien : https://github.com/lfiack/tp_freertos_reentrance. 
@@ -66,15 +62,14 @@ Nous avons :
 #define TASK2_DELAY 2
 
 et la sortie ressemble à : 
-/*
+
+*Je suis la tache 2 et je m'endors pour 2 ticks
+Je suis la tache 2 et je m'endors pour 2 ticks
+Je suis la tache 1 et je m'endors pour 2 ticks
 Je suis la tache 2 et je m'endors pour 2 ticks
 Je suis la tache 2 et je m'endors pour 2 ticks
 Je suis la tache 1 et je m'endors pour 2 ticks
-Je suis la tache 2 et je m'endors pour 2 ticks
-Je suis la tache 2 et je m'endors pour 2 ticks
-Je suis la tache 1 et je m'endors pour 2 ticks
-...
-*/
+...*
 
 Le problème ici est que les deux tâches s'endors pour le même nombre de ticks alors que la tâche 1 doit s'endormir pour 1 tick.
 Si on regarde le code, nous remarquons qu'ils accèdent au printf en même temps et donc influe sur la valeur. 
@@ -83,14 +78,12 @@ Pour résoudre le problème, il faut utiliser le sémaphore mutex.
 
 En rajoutant, une section critique autours des printf et en créeant cette fois-ci un semaphore mutex, nous avons : 
 
-/*
-Je suis la tache 2 et je m'endors pour 2 ticks
+*Je suis la tache 2 et je m'endors pour 2 ticks
 Je suis la tache 1 et je m'endors pour 1 ticks
 Je suis la tache 2 et je m'endors pour 2 ticks
 Je suis la tache 1 et je m'endors pour 1 ticks
 Je suis la tache 2 et je m'endors pour 2 ticks
-...
-*/
+...*
 
 Le problème est donc résolue.
 
@@ -124,12 +117,11 @@ Maintenant 123 tâches sont créer avant de planter. La RAM est uutilisé à 47.
 ### Gestion de la pile
 
 # RAPPEL :
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 Une variable interne à la fonction est dans la pile !
 Une varibale globale et une variable static (interne ou non) est dans le segment de donnée (RAM) et est compilé !
 Une variable alloué dynamiquement (malloc, alloc, creation de tache, semaphore, handle, notif, queue etc..) est dans le tas/
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# END RAPPEL
+
+END RAPPEL
 
 Pour cette partie notre objectif est de créer un overflow. 
 Pour cela, d'après la documentation FreeRTOS, nous utilisons la fonction vApplicationStackOverflowHook appelé automatiquement en cas d'overflow. 
