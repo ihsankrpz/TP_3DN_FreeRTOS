@@ -38,7 +38,7 @@ Pour les notifications, nous avons le même fonctionnement que pour le semaphore
 
 Le fonctionnement des queue est un peu différent. La queue met dans une fifo la valeur à envoyer et pour la réception, il faut lire la valeur.
 
-*q // send dans task1
+*// send dans task1
 q_value_send = i;
 xQueueSend(QueueHandle, &q_value_send ,portMAX_DELAY);
 vTaskDelay(portTICK_PERIOD_MS * 100 * i);
